@@ -1,0 +1,12 @@
+{
+  "name": "sleep-hypnosis",
+  "version": "1.0.0",
+  "private": false,
+  "description": "Static sleep hypnosis web app.",
+  "scripts": {
+    "check:agents": "node scripts/check-agents-sync.mjs",
+    "check:secrets": "node scripts/check-public-secrets.mjs",
+    "check": "npm run check:agents && npm run check:secrets"
+  },
+  "license": "UNLICENSED"
+}

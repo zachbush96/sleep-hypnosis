@@ -1,0 +1,11 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+node_modules/
+.herenow/
+dist/
+coverage/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
