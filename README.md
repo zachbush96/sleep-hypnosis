@@ -14,7 +14,11 @@ Open `index.html` directly in a browser, or serve the folder with any static ser
 Keep them synchronized with:
 
 ```bash
-npm run check:agents
+npm run sync:agents
 ```
 
-If the shared content intentionally changes, update both files together before committing.
+The local pre-commit hook in `.githooks/pre-commit` also runs this sync before every commit. Enable it once per checkout:
+
+```bash
+git config core.hooksPath .githooks
+```

@@ -4,6 +4,7 @@
   "private": false,
   "description": "Static sleep hypnosis web app.",
   "scripts": {
+    "sync:agents": "node scripts/sync-agents-md.mjs",
     "check:agents": "node scripts/check-agents-sync.mjs",
     "check:secrets": "node scripts/check-public-secrets.mjs",
     "check": "npm run check:agents && npm run check:secrets"
