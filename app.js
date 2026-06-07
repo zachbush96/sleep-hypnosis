@@ -279,12 +279,7 @@ const state = {
   releaseSet: new Set(),
   audioLayers: new Set(["rain", "speech"]),
   releaseBursts: [],
-  autoSceneAt: 0,
-  lastAutoScene: 0,
   lastInteraction: performance.now(),
-  touchY: 0,
-  wheelLockedUntil: 0,
-  scrollSyncTimer: null,
   deferredInstall: null,
   speechTimer: null,
   speechIndex: 0,
@@ -1119,19 +1114,12 @@ function syncFeedIndexFromScroll() {
   const nextIndex = Number(closest.dataset.index);
   if (Number.isFinite(nextIndex) && nextIndex !== state.feedIndex) {
     state.feedIndex = nextIndex;
-    const item = state.feedItems[state.feedIndex];
-    if (item?.type === "scene") updateScene(item.index);
-    else if (item?.type === "journal") showJournalCard(item.prompt);
     updateFeedUi();
   }
 }
 
 function isEditingTarget(target) {
   return Boolean(target?.closest?.("textarea, input, select, button"));
-}
-
-function autoSceneInterval() {
-  return Math.max(42000, state.sessionMs / 8);
 }
 
 function isExternalAudio() {
@@ -1274,7 +1262,6 @@ function updateSessionProgress() {
   state.progress = Math.min(1, elapsed / state.sessionMs);
   progressFill.style.width = `${state.progress * 100}%`;
   updatePhase();
-  maybeAutoScene(elapsed);
   const remaining = Math.max(0, state.sessionMs - elapsed);
   const minutes = Math.floor(remaining / 60000);
   const seconds = Math.floor((remaining % 60000) / 1000);
@@ -1288,18 +1275,9 @@ function updatePhase() {
   phaseFill.style.width = `${state.progress * 100}%`;
 }
 
-function maybeAutoScene(elapsed) {
-  if (!state.running || state.locked || state.activeJournalPrompt || elapsed < state.autoSceneAt) return;
-  state.lastAutoScene += 1;
-  updateScene(state.activeScene + 1);
-  state.autoSceneAt += autoSceneInterval();
-}
-
 async function startSession() {
   state.sessionMs = durationValue() * 60 * 1000;
   state.sessionStartedAt = performance.now();
-  state.autoSceneAt = autoSceneInterval();
-  state.lastAutoScene = 0;
   state.running = true;
   state.sleepTail = false;
   state.progress = 0;
@@ -1684,34 +1662,7 @@ function bindControls() {
     }
   });
 
-  sleepFeed?.addEventListener("scroll", () => {
-    window.clearTimeout(state.scrollSyncTimer);
-    state.scrollSyncTimer = window.setTimeout(syncFeedIndexFromScroll, 80);
-  }, { passive: true });
-
-  window.addEventListener("wheel", (event) => {
-    if (state.locked) return;
-    if (isEditingTarget(event.target)) return;
-    if (performance.now() < state.wheelLockedUntil) return;
-    if (Math.abs(event.deltaY) < 30) return;
-    markInteraction();
-    state.wheelLockedUntil = performance.now() + 420;
-    navigateFeed(event.deltaY > 0 ? 1 : -1);
-  }, { passive: true });
-
-  window.addEventListener("touchstart", (event) => {
-    state.touchY = event.touches[0].clientY;
-  }, { passive: true });
-
-  window.addEventListener("touchend", (event) => {
-    if (state.locked) return;
-    if (isEditingTarget(event.target)) return;
-    const delta = state.touchY - event.changedTouches[0].clientY;
-    if (Math.abs(delta) > 52) {
-      markInteraction();
-      navigateFeed(delta > 0 ? 1 : -1);
-    }
-  }, { passive: true });
+  sleepFeed?.addEventListener("scroll", syncFeedIndexFromScroll, { passive: true });
 
   window.addEventListener("pointerdown", markInteraction);
   window.addEventListener("resize", resize);
@@ -1750,7 +1701,8 @@ resize();
 bindControls();
 setupInstall();
 registerServiceWorker();
-showFeedItem(0);
+updateScene(0);
+updateFeedUi();
 updateReleaseUi();
 sessionReadout.textContent = `${durationValue()} min`;
 requestAnimationFrame(animate);
