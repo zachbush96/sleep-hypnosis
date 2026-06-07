@@ -1217,8 +1217,8 @@ async function startSelectedAudio() {
   }
 
   pauseYouTube();
-  await sleepAudio.start(scenes[state.activeScene]);
   startNarration(true);
+  await sleepAudio.start(scenes[state.activeScene]);
 }
 
 async function ensureGeneratedAudioForLayer() {
@@ -1488,7 +1488,7 @@ function pickVoice() {
 }
 
 function speakLine(text) {
-  if (!window.speechSynthesis || !narrationToggle.checked || !state.running) return;
+  if (!window.speechSynthesis || !narrationToggle.checked || !state.running) return false;
   const utterance = new SpeechSynthesisUtterance(text);
   const voice = pickVoice();
   if (voice) utterance.voice = voice;
@@ -1497,17 +1497,33 @@ function speakLine(text) {
   utterance.volume = Number(voiceVolume.value);
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(utterance);
+  return true;
+}
+
+function queueNextNarration(delay = 36000) {
+  window.clearTimeout(state.speechTimer);
+  if (!narrationToggle.checked || !state.running) return;
+  state.speechTimer = window.setTimeout(() => {
+    if (speakLine(hypnosisLines[state.speechIndex % hypnosisLines.length])) {
+      state.speechIndex += 1;
+    }
+    queueNextNarration();
+  }, delay);
 }
 
 function startNarration(immediate = false) {
-  stopNarration();
+  window.clearTimeout(state.speechTimer);
   if (!narrationToggle.checked || !state.running) return;
-  const delay = immediate ? 1200 : 36000;
-  state.speechTimer = window.setTimeout(() => {
-    speakLine(hypnosisLines[state.speechIndex % hypnosisLines.length]);
-    state.speechIndex += 1;
-    startNarration(false);
-  }, delay);
+
+  if (immediate) {
+    if (speakLine(hypnosisLines[state.speechIndex % hypnosisLines.length])) {
+      state.speechIndex += 1;
+    }
+    queueNextNarration();
+    return;
+  }
+
+  queueNextNarration();
 }
 
 function stopNarration() {
